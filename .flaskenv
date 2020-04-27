@@ -1,1 +1,1 @@
-FLASK_APP=help_your_neighbor.py
+FLASK_APP=app/application.py
