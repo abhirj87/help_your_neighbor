@@ -58,14 +58,27 @@ class Authorization(db.Model):
             'iat': datetime.now(timezone.utc),
             'exp': datetime.now(timezone.utc) + timedelta(hours=1),
         }
-        signing_key = "a random, long, sequence of characters that only the server knows"
-        # with open('rsa_private_key.pem', 'rb') as fh:
-        #     signing_key = jwk_from_pem(fh.read())
-        encoded_jwt = jwt.encode(message, signing_key, algorithm='HS256')
+
+        encoded_jwt = jwt.encode(message, self.get_secret(), algorithm=self.get_alogorithm())
         access_token = {
-            "access_token": encoded_jwt
+            "access_token": encoded_jwt.decode()
         }
         return access_token
+
+    @classmethod
+    def get_alogorithm(cls):
+        return 'HS256'
+
+    @classmethod
+    def get_secret(cls):
+        # with open('rsa_private_key.pem', 'rb') as fh:
+        #     signing_key = jwk_from_pem(fh.read())
+        signing_key = "a random, long, sequence of characters that only the server knows"
+        return signing_key
+
+    @classmethod
+    def verify_signature(cls, token):
+        return jwt.decode(token, cls.get_secret(), algorithms=[cls.get_alogorithm()])
 
 
 class Dashboard:
@@ -85,7 +98,7 @@ class Dashboard:
 
 
 class Help(db.Model):
-    uuid = db.Column(db.String, primary_key=True)
+    uuid = db.Column(db.String(80), primary_key=True)
     description = db.Column(db.String(80), nullable=False)
     created_time = db.Column(db.String(80))
     response_time = db.Column(db.String(80))
@@ -182,7 +195,8 @@ class User(db.Model, JSONEncoder):
     def get_by_id(cls, user_id):
         usr = cls.query.filter_by(user_id=user_id).first()
         if usr is None:
-            raise Exception('unable to find user by id')
+            print('unable to find user by id')
+            return None
 
         return usr
 

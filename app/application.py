@@ -18,6 +18,9 @@ class User(Resource):
         headers = request.headers.get('Authorization')
         print('headers: ', headers)
         usr = model.User.get_by_id(id)
+        if usr is None:
+            return name_space.abort(400, status="user not found", statusCode="400")
+
         return usr.to_json()
 
     @app.expect(Person)
@@ -27,7 +30,7 @@ class User(Resource):
         kwargs['user_id'] = id
         usr = model.User(**kwargs)
         usr.persist()
-        return usr
+        return usr.to_json()
 
 
 @name_space.route("/v1/auth")
@@ -38,6 +41,7 @@ class Auth(Resource):
     def post(self):
         body = request.data
         kwargs = json.loads(body)
+        kwargs['registration_key'] = ''
         auth = model.Authorization(**kwargs)
         return auth.validate()
 
@@ -80,5 +84,3 @@ class Help(Resource):
             name_space.abort(500, e.__doc__, status="Could not retrieve information", statusCode="500")
         except Exception as e:
             name_space.abort(400, e.__doc__, status="Could not retrieve information", statusCode="400")
-
-

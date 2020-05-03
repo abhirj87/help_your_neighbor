@@ -2,8 +2,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
 from flask_restplus import Api, fields
-
-
+import pymysql
 
 flask_app = Flask(__name__)
 app = Api(app=flask_app,
@@ -12,10 +11,12 @@ app = Api(app=flask_app,
           description="Help Your Neighbor application"
           )
 
-flask_app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+pymysql.install_as_MySQLdb()
+
+# flask_app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+flask_app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:password@localhost:3306/db'
 
 db = SQLAlchemy(flask_app)
-
 
 name_space = app.namespace('help_your_neighbor', description='Help Your Neighbor APIs')
 
