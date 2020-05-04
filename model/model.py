@@ -53,7 +53,7 @@ class Authorization(db.Model):
 
         message = {
             'iss': 'https://helpyourneighbor.com/',
-            'sub': self.username,
+            'user': self.username,
             'reg': self.registration_key,
             'iat': datetime.now(timezone.utc),
             'exp': datetime.now(timezone.utc) + timedelta(hours=1),
@@ -78,6 +78,9 @@ class Authorization(db.Model):
 
     @classmethod
     def verify_signature(cls, token):
+        if token is None:
+            print('User Not logged in!!')
+            return
         return jwt.decode(token, cls.get_secret(), algorithms=[cls.get_alogorithm()])
 
 
@@ -91,10 +94,17 @@ class Dashboard:
         self.total_help_responses = 0
 
     def fetch(self):
-        self.needy_count = 100
-        self.donor_count = 50
-        self.total_help_requests = 10
-        return
+        self.needy_count = Help.get_needy_count()
+        self.donor_count = Help.get_donor_count()
+        self.total_help_requests = Help.get_count()
+        return self.to_json()
+
+    def to_json(self):
+        return {
+            'needy_count': self.needy_count,
+            'donor_count': self.donor_count,
+            'total_help_requests': self.total_help_requests
+        }
 
 
 class Help(db.Model):
@@ -108,25 +118,45 @@ class Help(db.Model):
     address = db.Column(db.String(80))
     response_notes = db.Column(db.String(8000))
 
-    def __init__(self, description, requestor_id, address=None):
-        self.uuid = uuid.uuid4()
+    def __init__(self, requestor_id, note, description, address, location):
+        self.uuid = str(uuid.uuid4())
         self.description = description
         self.created_time = str(datetime.now())
         self.requestor_id = requestor_id
         self.status = HelpStatus.Open
-        self.response_notes = ''
+        self.response_notes = note
         self.address = address
+        self.location = location
 
     def respond(self, note, donor):
         self.response_time = datetime.now()
         response = f'<note:{note},donor:{donor}>,'
         self.response_notes = self.response_notes + response
-        self.status = HelpStatus.Responded
+        self.status = str(HelpStatus.Responded)
         self.persist()
 
     def close(self):
         self.status = "CLOSED"
         self.persist()
+
+    @classmethod
+    def get_needy_count(cls):
+        return cls.query.filter_by(status=str(HelpStatus.Open)).count()
+
+    @classmethod
+    def get_count(cls):
+        return cls.query.count()
+
+    @classmethod
+    def get_donor_count(cls):
+        responded = cls.query.filter_by(status=str(HelpStatus.Responded)).count()
+        closed = cls.query.filter_by(status=str(HelpStatus.Closed)).count()
+        if responded is None:
+            responded = 0
+        if closed is None:
+            closed = 0
+
+        return responded + closed
 
     def persist(self):
         db.session.add(self)
@@ -134,11 +164,12 @@ class Help(db.Model):
 
     @classmethod
     def get_by_id(self, id):
-        help = self.query.filter_by(uuid=id).first()
-        if help is None:
-            raise Exception('Unable to get the help request')
+        h = self.query.filter_by(uuid=id).first()
+        if h is None:
+            print('unable to find user by id')
+            return None
 
-        return help
+        return h
 
     @classmethod
     def get_all(self):
@@ -147,6 +178,19 @@ class Help(db.Model):
             raise Exception('No records found')
 
         return helps
+
+    def to_json(self):
+        return {
+            'uuid': self.uuid,
+            'description': self.description,
+            'created_time': self.created_time,
+            'response_time': self.response_time,
+            'requestor_id': self.requestor_id,
+            'status': self.status,
+            'location': self.location,
+            'address': self.address,
+            'response_notes': self.response_notes
+        }
 
 
 class User(db.Model, JSONEncoder):

@@ -1,8 +1,7 @@
-
-from flask_sqlalchemy import SQLAlchemy
+import pymysql
 from flask import Flask
 from flask_restplus import Api, fields
-import pymysql
+from flask_sqlalchemy import SQLAlchemy
 
 flask_app = Flask(__name__)
 app = Api(app=flask_app,
@@ -42,8 +41,8 @@ Person = app.model('Person Model',
                                             help=""),
 
                     'lat_long': fields.String(required=False,
-                                             description="Latitude, Longitude",
-                                             help=""),
+                                              description="Latitude, Longitude",
+                                              help=""),
 
                     'role': fields.String(required=True,
                                           description="Role should be one of the following [Admin, Donor, Needy]",
@@ -61,6 +60,12 @@ Auth = app.model('Auth Model',
                                             help="Password cannot be blank")
                   })
 
+Dashboard = app.model('Dashboard Model',
+                      {'token': fields.String(required=True,
+                                              description="access_token",
+                                              help="access_token cannot be blank")
+                       })
+
 Registration = app.model('Register Model',
                          {'username': fields.String(required=True,
                                                     description="Username",
@@ -72,21 +77,24 @@ Registration = app.model('Register Model',
                           })
 
 Help = app.model('Help Model',
-                 {'Description': fields.String(required=True,
-                                               description="Description",
-                                               help="Description cannot be blank"),
+                 {'description': fields.String(required=False,
+                                               description="description",
+                                               help="description cannot be blank"),
 
-                  'Notes': fields.String(required=False,
-                                         description="Notes",
-                                         help="Notes"),
-
-                  'Status': fields.String(required=False,
-                                          description="Status",
-                                          help=""),
-
-                  'ID': fields.String(required=False,
-                                      description="ID on which this update needs to be added. If ID is nil new request will be created",
-                                      help="")
+                  'note': fields.String(required=True,
+                                         description="note",
+                                         help="note"),
+                  'address': fields.String(required=False,
+                                           description="Address",
+                                           help=""),
+                  'location': fields.String(required=False,
+                                            description="Latitude, Longitude",
+                                            help=""),
+                  'token': fields.String(required=True,
+                                         description="token",
+                                         help=""),
+                  'closed': fields.Boolean(required=False,
+                                           description="Should this be closed?",
+                                           help="", default=False)
 
                   })
-

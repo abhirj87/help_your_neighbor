@@ -53,8 +53,7 @@ class Dashboard(Resource):
     def get(self, role):
         print("Role: ", role)
         d = model.Dashboard(role)
-        d.fetch()
-        return d
+        return d.fetch()
 
 
 @name_space.route("/v1/register/<string:registration_key>")
@@ -70,17 +69,46 @@ class Register(Resource):
         return {"message": "success"}
 
 
-@name_space.route("/v1/help/<string:user>/<string:id>")
+@name_space.route("/v1/help/<string:id>")
 class Help(Resource):
 
     @app.doc(responses={200: 'OK', 400: 'Invalid Argument', 500: 'Mapping Key Error'})
     @app.expect(Help)
-    def post(self, user, id):
-        try:
-            print("id:", user, id)
-            # TODO: Update passowrd. return success
-            return {"message": "success"}
-        except KeyError as e:
-            name_space.abort(500, e.__doc__, status="Could not retrieve information", statusCode="500")
-        except Exception as e:
-            name_space.abort(400, e.__doc__, status="Could not retrieve information", statusCode="400")
+    def post(self, id):
+        print("id:", id)
+        body = request.data
+        kwargs = json.loads(body)
+        print(kwargs)
+        is_closed = kwargs['closed']
+
+        if kwargs['description'] is None and kwargs['note'] is None:
+            return name_space.abort(400, status="bad input: Description and Notes both cannot be empty",
+                                    statusCode="400")
+
+        if kwargs['location'] is None and kwargs['address'] is None:
+            return name_space.abort(400, status="bad input: Lat_Long and Address both cannot be empty",
+                                    statusCode="400")
+
+        auth_data = model.Authorization.verify_signature(kwargs['token'])
+        user = auth_data['user']
+        print('user: ', user)
+        if id is None or str(id).isspace():
+            #     Create new one
+            if user is None:
+                return name_space.abort(400, status="Failed to authenticate", statusCode="400")
+
+            kwargs['requestor_id'] = user
+            del kwargs['token']
+            del kwargs['closed']
+            h = model.Help(**kwargs)
+            h.persist()
+            return h.to_json()
+
+        h = model.Help.get_by_id(id)
+        if h is None:
+            return name_space.abort(400, status="Unable to fetch the given help id", statusCode="400")
+
+        h.respond(kwargs['note'], user)
+        h.persist()
+
+        return h.to_json()
