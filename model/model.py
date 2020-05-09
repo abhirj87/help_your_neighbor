@@ -123,7 +123,7 @@ class Help(db.Model):
         self.description = description
         self.created_time = str(datetime.now())
         self.requestor_id = requestor_id
-        self.status = HelpStatus.Open
+        self.status = str(HelpStatus.Open)
         self.response_notes = note
         self.address = address
         self.location = location
